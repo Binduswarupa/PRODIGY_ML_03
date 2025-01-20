@@ -1,0 +1,76 @@
+# Import necessary libraries
+import os  # Import for file system operations
+import cv2
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+
+# Parameters
+img_size = 64  # Resize images to 64x64 for faster processing
+labels = []  # To store labels (0 for Cat, 1 for Dog)
+images = []  # To store image data
+
+# Path to the extracted dataset
+dataset_path = 'train'
+
+# Limit the dataset size for testing purposes (reduce number of images to speed up processing)
+sample_size = 1000  # Adjust as needed
+count = 0
+
+# Load and preprocess the dataset
+for file in os.listdir(dataset_path):
+    if count >= sample_size:
+        break  # Stop after processing sample_size number of images
+    try:
+        label = 0 if 'cat' in file.lower() else 1  # Label: 0 for Cat, 1 for Dog
+        file_path = os.path.join(dataset_path, file)
+        img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)  # Load in grayscale
+        if img is not None:  # Ensure the image is loaded successfully
+            img = cv2.resize(img, (img_size, img_size))  # Resize image
+            images.append(img.flatten())  # Flatten the image
+            labels.append(label)
+            count += 1
+    except Exception as e:
+        print(f"Error processing file {file_path}: {e}")
+
+# Convert lists to NumPy arrays
+images = np.array(images)
+labels = np.array(labels)
+
+# Normalize pixel values to the range [0, 1]
+images = images / 255.0
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
+
+# Train the SVM classifier with a linear kernel for faster training
+print("Training the SVM classifier...")
+svm = SVC(kernel='linear', C=1.0)  # Using linear kernel for faster performance
+svm.fit(X_train, y_train)
+
+# Predict on the test dataset
+print("Predicting on test data...")
+y_pred = svm.predict(X_test)
+
+# Classification Report
+print("\nClassification Report:")
+report = classification_report(y_test, y_pred, target_names=["Cat", "Dog"])
+print(report)
+
+# Confusion Matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+print("\nConfusion Matrix:")
+print(conf_matrix)
+
+# Confusion Matrix Visualization
+plt.figure(figsize=(8, 6))
+plt.imshow(conf_matrix, cmap='Blues', interpolation='nearest')
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.colorbar()
+plt.xticks([0, 1], ['Cat', 'Dog'])
+plt.yticks([0, 1], ['Cat', 'Dog'])
+plt.show()
